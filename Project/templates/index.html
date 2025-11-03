@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Gemini Vision App</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <h1>Gemini Image Analyzer</h1>
+  
+  <form id="uploadForm" enctype="multipart/form-data">
+    <input type="file" id="fileInput" name="file" accept="image/*" capture="camera">
+    <button type="submit">Upload & Analyze</button>
+  </form>
+
+  <div id="result" style="display:none;">
+    <h2>Result for <span id="user-id"></span></h2>
+    <p id="description"></p>
+    <div id="video"></div>
+    <div id="audio"></div>
+  </div>
+
+  <script>
+    const form = document.getElementById('uploadForm');
+    const resultDiv = document.getElementById('result');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fileInput = document.getElementById('fileInput');
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+
+      const res = await fetch('/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (data.error) {
+        alert(data.error);
+        return;
+      }
+
+      document.getElementById('user-id').innerText = data.user_id;
+      document.getElementById('description').innerText = data.description;
+      document.getElementById('video').innerHTML = data.video_iframe;
+      document.getElementById('audio').innerHTML = data.audio_iframe;
+      resultDiv.style.display = 'block';
+    });
+  </script>
+</body>
+</html>
