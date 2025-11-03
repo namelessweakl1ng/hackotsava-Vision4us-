@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Museum - Painting Analyzer</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f2f5f9;
+      color: #333;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 50px auto;
+      background: white;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    h1 {
+      color: #3a3a8f;
+    }
+    video, img {
+      width: 100%;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+    input[type="file"] {
+      display: none;
+    }
+    .btn {
+      display: inline-block;
+      padding: 10px 20px;
+      margin: 8px;
+      border-radius: 6px;
+      border: none;
+      background: #3a3a8f;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn:hover {
+      background: #2e2e73;
+    }
+    #result {
+      margin-top: 20px;
+      text-align: left;
+    }
+    #result iframe {
+      width: 100%;
+      height: 300px;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎨 AI Painting Analyzer</h1>
+    <p>Capture or upload a painting to analyze with AI</p>
+
+    <video id="camera" autoplay playsinline muted></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+
+    <div>
+      <button class="btn" id="startCamera">📷 Start Camera</button>
+      <button class="btn" id="capture">📸 Capture</button>
+      <label class="btn" for="fileInput">📂 Upload Image</label>
+      <input type="file" id="fileInput" accept="image/*" />
+    </div>
+
+    <div id="result"></div>
+  </div>
+
+  <script>
+    const camera = document.getElementById('camera');
+    const canvas = document.getElementById('canvas');
+    const captureBtn = document.getElementById('capture');
+    const fileInput = document.getElementById('fileInput');
+    const startCameraBtn = document.getElementById('startCamera');
+    const resultDiv = document.getElementById('result');
+    let stream;
+
+    // Start camera
+    startCameraBtn.addEventListener('click', async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        camera.srcObject = stream;
+      } catch (err) {
+        alert('Camera access denied or unavailable.');
+      }
+    });
+
+    // Capture from camera
+    captureBtn.addEventListener('click', async () => {
+      if (!stream) return alert("Camera not started!");
+      const context = canvas.getContext('2d');
+      canvas.width = camera.videoWidth;
+      canvas.height = camera.videoHeight;
+      context.drawImage(camera, 0, 0);
+      canvas.toBlob(async (blob) => {
+        await uploadImage(blob, 'captured.png');
+      }, 'image/png');
+    });
+
+    // Upload from file
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        await uploadImage(file, file.name);
+        // Reset the file input so that the same file can be uploaded again
+        fileInput.value = '';
+      }
+    });
+
+    // Upload function
+    async function uploadImage(file, filename) {
+      resultDiv.innerHTML = "<p>⏳ Analyzing painting...</p>";
+      const formData = new FormData();
+      formData.append('file', file, filename);
+
+      try {
+        const res = await fetch('http://127.0.0.1:8000/api/analyze-painting', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+
+        if (data.status === "success") {
+          resultDiv.innerHTML = `
+            <h3>🖼️ ${data.data.filename}</h3>
+            <p><strong>Description:</strong> ${data.data.description}</p>
+            <iframe src="${data.data.youtube_link}" allowfullscreen></iframe>
+            <p><small>📅 ${data.data.timestamp}</small></p>
+          `;
+        } else {
+          resultDiv.innerHTML = `<p>❌ Error: ${data.error || 'Something went wrong'}</p>`;
+        }
+      } catch (err) {
+        resultDiv.innerHTML = `<p>❌ Failed to connect to server.</p>`;
+        console.error(err);
+      }
+    }
+  </script>
+</body>
+</html>
