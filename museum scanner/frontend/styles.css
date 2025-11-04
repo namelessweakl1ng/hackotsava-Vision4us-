@@ -1,32 +1,571 @@
-body {
-  font-family: Arial, sans-serif;
-  text-align: center;
-  background-color: #f5f5f5;
-  margin: 0;
-  padding: 20px;
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Museum - Painting Analyzer</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
 
-form {
-  margin-bottom: 20px;
-}
+  <style>
+    :root {
+      --primary: #7c3aed;
+      --primary-dark: #6d28d9;
+      --secondary: #3b82f6;
+      --accent: #06b6d4;
+      --light-bg: #f8fafc;
+      --light-card: #ffffff;
+      --light-text: #1e293b;
+      --light-text-secondary: #64748b;
+      --light-border: #e2e8f0;
+      --dark-bg: #0f172a;
+      --dark-card: #1e293b;
+      --dark-text: #f1f5f9;
+      --dark-text-secondary: #94a3b8;
+      --dark-border: #334155;
+      --shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      --shadow-dark: 0 10px 25px rgba(0, 0, 0, 0.3);
+      --transition: all 0.3s ease;
+    }
 
-button {
-  padding: 10px 20px;
-  background-color: #007bff;
-  border: none;
-  color: white;
-  border-radius: 5px;
-  cursor: pointer;
-}
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-button:hover {
-  background-color: #0056b3;
-}
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: var(--light-bg);
+      color: var(--light-text);
+      line-height: 1.6;
+      transition: var(--transition);
+      min-height: 100vh;
+      position: relative;
+    }
 
-#result {
-  background: white;
-  padding: 20px;
-  border-radius: 10px;
-  display: inline-block;
-  box-shadow: 0 0 10px rgba(0,0,0,0.1);
-}
+    body.dark-mode {
+      background-color: var(--dark-bg);
+      color: var(--dark-text);
+    }
+
+    /* Background decorative elements */
+    .bg-art {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      opacity: 0.05;
+      pointer-events: none;
+    }
+
+    .bg-art::before {
+      content: '';
+      position: absolute;
+      top: 10%;
+      left: 5%;
+      width: 200px;
+      height: 200px;
+      background: var(--primary);
+      border-radius: 50%;
+      filter: blur(60px);
+    }
+
+    .bg-art::after {
+      content: '';
+      position: absolute;
+      bottom: 10%;
+      right: 5%;
+      width: 250px;
+      height: 250px;
+      background: var(--accent);
+      border-radius: 50%;
+      filter: blur(60px);
+    }
+
+    /* Header styles */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo i {
+      font-size: 2rem;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.8rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Theme toggle */
+    .theme-toggle {
+      background: var(--light-card);
+      border: 1px solid var(--light-border);
+      border-radius: 50px;
+      padding: 8px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: var(--transition);
+      box-shadow: var(--shadow);
+      position: relative;
+      width: 70px;
+    }
+
+    body.dark-mode .theme-toggle {
+      background: var(--dark-card);
+      border-color: var(--dark-border);
+      box-shadow: var(--shadow-dark);
+    }
+
+    .theme-toggle i {
+      font-size: 1.2rem;
+      color: var(--light-text-secondary);
+      z-index: 1;
+    }
+
+    body.dark-mode .theme-toggle i {
+      color: var(--dark-text-secondary);
+    }
+
+    .toggle-ball {
+      width: 24px;
+      height: 24px;
+      background: var(--primary);
+      border-radius: 50%;
+      position: absolute;
+      left: 10px;
+      transition: var(--transition);
+      z-index: 0;
+    }
+
+    body.dark-mode .toggle-ball {
+      left: calc(100% - 34px);
+    }
+
+    /* Main container */
+    .container {
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 2.5rem;
+      background: var(--light-card);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      transition: var(--transition);
+    }
+
+    body.dark-mode .container {
+      background: var(--dark-card);
+      box-shadow: var(--shadow-dark);
+    }
+
+    .container h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.2rem;
+      text-align: center;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .container p {
+      text-align: center;
+      color: var(--light-text-secondary);
+      margin-bottom: 2rem;
+      font-size: 1.1rem;
+    }
+
+    body.dark-mode .container p {
+      color: var(--dark-text-secondary);
+    }
+
+    /* Camera and image styles */
+    .media-container {
+      position: relative;
+      margin: 1.5rem 0;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      transition: var(--transition);
+    }
+
+    body.dark-mode .media-container {
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    video, img {
+      width: 100%;
+      display: block;
+      border-radius: 16px;
+    }
+
+    canvas {
+      display: none;
+    }
+
+    /* Button styles */
+    .button-group {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin: 2rem 0;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: 12px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      font-family: 'Outfit', sans-serif;
+      font-size: 1rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 15px rgba(124, 58, 237, 0.3);
+    }
+
+    .btn-secondary {
+      background: var(--light-card);
+      color: var(--light-text);
+      border: 1px solid var(--light-border);
+    }
+
+    body.dark-mode .btn-secondary {
+      background: var(--dark-card);
+      color: var(--dark-text);
+      border-color: var(--dark-border);
+    }
+
+    .btn-secondary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn i {
+      font-size: 1.1rem;
+    }
+
+    /* File input */
+    input[type="file"] {
+      display: none;
+    }
+
+    /* Result section */
+    #result {
+      margin-top: 2rem;
+      padding: 2rem;
+      background: var(--light-bg);
+      border-radius: 16px;
+      transition: var(--transition);
+      animation: fadeIn 0.5s ease;
+      display: none;
+    }
+
+    body.dark-mode #result {
+      background: rgba(30, 41, 59, 0.5);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    #result h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.6rem;
+      margin-bottom: 1rem;
+      color: var(--light-text);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    body.dark-mode #result h3 {
+      color: var(--dark-text);
+    }
+
+    #result p {
+      text-align: left;
+      margin-bottom: 1rem;
+      color: var(--light-text-secondary);
+    }
+
+    body.dark-mode #result p {
+      color: var(--dark-text-secondary);
+    }
+
+    #result strong {
+      color: var(--light-text);
+    }
+
+    body.dark-mode #result strong {
+      color: var(--dark-text);
+    }
+
+    #result small {
+      color: #9ca3af;
+      font-size: 0.85rem;
+    }
+
+    body.dark-mode #result small {
+      color: #7c8da0;
+    }
+
+    /* Loading animation */
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      padding: 2rem;
+    }
+
+    .loading-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--primary);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    .loading-dot:nth-child(2) {
+      animation-delay: 0.2s;
+      background: var(--secondary);
+    }
+
+    .loading-dot:nth-child(3) {
+      animation-delay: 0.4s;
+      background: var(--accent);
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(0.8); opacity: 0.5; }
+      50% { transform: scale(1.2); opacity: 1; }
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--light-text-secondary);
+      font-size: 0.9rem;
+    }
+
+    body.dark-mode footer {
+      color: var(--dark-text-secondary);
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+      .container {
+        margin: 1rem;
+        padding: 1.5rem;
+      }
+
+      .button-group {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+
+      header {
+        padding: 1rem;
+      }
+
+      .logo h1 {
+        font-size: 1.5rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .container h2 {
+        font-size: 1.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-art"></div>
+
+  <header>
+    <div class="logo">
+      <i class="fas fa-palette"></i>
+      <h1>ArtVision AI</h1>
+    </div>
+    <div class="theme-toggle" id="themeToggle">
+      <i class="fas fa-sun"></i>
+      <i class="fas fa-moon"></i>
+      <div class="toggle-ball"></div>
+    </div>
+  </header>
+
+  <div class="container">
+    <h2>Discover the Story Behind Art</h2>
+    <p>Upload or capture any painting to unlock its history, meaning, and artistic details with AI analysis</p>
+
+    <div class="media-container">
+      <video id="camera" autoplay playsinline muted></video>
+      <canvas id="canvas"></canvas>
+    </div>
+
+    <div class="button-group">
+      <button class="btn btn-primary" id="startCamera">
+        <i class="fas fa-camera"></i> Start Camera
+      </button>
+      <button class="btn btn-primary" id="capture">
+        <i class="fas fa-camera-retro"></i> Capture
+      </button>
+      <label class="btn btn-secondary" for="fileInput">
+        <i class="fas fa-upload"></i> Upload Image
+      </label>
+      <input type="file" id="fileInput" accept="image/*" />
+    </div>
+
+    <div id="result"></div>
+  </div>
+
+  <footer>
+    <p>AI Painting Analyzer &copy; 2023 | Explore Art Through Technology</p>
+  </footer>
+
+  <script>
+    const camera = document.getElementById('camera');
+    const canvas = document.getElementById('canvas');
+    const captureBtn = document.getElementById('capture');
+    const fileInput = document.getElementById('fileInput');
+    const startCameraBtn = document.getElementById('startCamera');
+    const resultDiv = document.getElementById('result');
+    const themeToggle = document.getElementById('themeToggle');
+    let stream;
+
+    // Theme toggle functionality
+    themeToggle.addEventListener('click', () => {
+      document.body.classList.toggle('dark-mode');
+      const isDarkMode = document.body.classList.contains('dark-mode');
+      localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+    });
+
+    // Load theme preference on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+      }
+    });
+
+    // Camera functionality
+    startCameraBtn.addEventListener('click', async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        camera.srcObject = stream;
+        startCameraBtn.innerHTML = '<i class="fas fa-video"></i> Camera Active';
+        startCameraBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+      } catch (err) {
+        alert('Camera access denied or unavailable.');
+      }
+    });
+
+    captureBtn.addEventListener('click', async () => {
+      if (!stream) return alert("Camera not started!");
+      const context = canvas.getContext('2d');
+      canvas.width = camera.videoWidth;
+      canvas.height = camera.videoHeight;
+      context.drawImage(camera, 0, 0);
+      canvas.toBlob(async (blob) => {
+        await uploadImage(blob, 'captured.png');
+      }, 'image/png');
+    });
+
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        await uploadImage(file, file.name);
+        fileInput.value = '';
+      }
+    });
+
+    async function uploadImage(file, filename) {
+      resultDiv.style.display = 'block';
+      resultDiv.innerHTML = `
+        <div class="loading">
+          <div class="loading-dot"></div>
+          <div class="loading-dot"></div>
+          <div class="loading-dot"></div>
+        </div>
+        <p style="text-align: center;">Analyzing artwork with AI...</p>
+      `;
+      
+      const formData = new FormData();
+      formData.append('file', file, filename);
+
+      try {
+        const res = await fetch('http://127.0.0.1:8000/api/analyze-painting', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!res.ok) {
+          throw new Error(`Server error: ${res.status}`);
+        }
+        
+        const data = await res.json();
+
+        if (data.status === "success") {
+          resultDiv.innerHTML = `
+            <h3><i class="fas fa-scroll"></i> ${data.data.filename}</h3>
+            <p><strong><i class="fas fa-paint-brush"></i> Art Analysis:</strong></p>
+            <p>${data.data.description}</p>
+            <p><small><i class="far fa-clock"></i> Analyzed: ${data.data.timestamp}</small></p>
+          `;
+        } else {
+          resultDiv.innerHTML = `<p style="color: #ef4444; text-align: center;"><strong><i class="fas fa-exclamation-circle"></i> Error:</strong> ${data.error || 'Something went wrong'}</p>`;
+        }
+      } catch (err) {
+        console.error('Upload error:', err);
+        resultDiv.innerHTML = `<p style="color: #ef4444; text-align: center;"><strong><i class="fas fa-exclamation-circle"></i> Connection Error:</strong> Failed to connect to server. Please make sure your backend is running on http://127.0.0.1:8000</p>`;
+      }
+    }
+  </script>
+</body>
+</html>
