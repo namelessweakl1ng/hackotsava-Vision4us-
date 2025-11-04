@@ -60,17 +60,12 @@ async def analyze_painting(file: UploadFile = File(...)):
         description = response.text or "No description found."
 
         # Mock YouTube video link
-        video_link = random.choice([
-            "https://www.youtube.com/embed/dQw4w9WgXcQ",
-            "https://www.youtube.com/embed/kXYiU_JCYtU",
-            "https://www.youtube.com/embed/3tmd-ClpJxA"
-        ])
+
 
         # Store result in MongoDB
         record = {
             "filename": file.filename,
             "description": description,
-            "youtube_link": video_link,
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
         }
         result = collection.insert_one(record)
