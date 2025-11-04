@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from io import BytesIO
 from PIL import Image
 import os, json, random, time
-from bson import ObjectId  #  Import this to handle MongoDB ObjectIds
+from bson import ObjectId  # Import this to handle MongoDB ObjectIds
 
 # ------------------------------
 #  Setup
@@ -48,29 +48,54 @@ async def analyze_painting(file: UploadFile = File(...)):
         uploaded = client.files.upload(file=temp_path)
         os.remove(temp_path)
 
-        # Ask Gemini for description
+        # Ask Gemini for description in JSON format
+        prompt = """Please analyze the artwork and provide a JSON object with the following keys:
+        - "artist": string or null
+        - "time_period": string or null
+        - "style": string or null
+        - "historical_context": string or null
+        - "description": string
+
+        The JSON object:"""
+
         response = client.models.generate_content(
             model="models/gemini-2.0-flash",
             contents=[
-                "Describe this artwork in detail — artist, time period, style, and historical/cultural background if identifiable.",
+                prompt,
                 uploaded
             ]
         )
 
-        description = response.text or "No description found."
-
-        # Mock YouTube video link
-
+        # Try to parse the response as JSON
+        try:
+            # Extract JSON from the response
+            start = response.text.find('{')
+            end = response.text.rfind('}') + 1
+            json_str = response.text[start:end]
+            data = json.loads(json_str)
+        except Exception as e:
+            # If parsing fails, use the entire response as description
+            data = {
+                "artist": None,
+                "time_period": None,
+                "style": None,
+                "historical_context": None,
+                "description": response.text
+            }
 
         # Store result in MongoDB
         record = {
             "filename": file.filename,
-            "description": description,
+            "artist": data.get("artist"),
+            "time_period": data.get("time_period"),
+            "style": data.get("style"),
+            "historical_context": data.get("historical_context"),
+            "description": data.get("description"),
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
         }
         result = collection.insert_one(record)
 
-        # ✅ Convert ObjectId to string for JSON
+        # Convert ObjectId to string for JSON
         record["_id"] = str(result.inserted_id)
 
         return JSONResponse({
