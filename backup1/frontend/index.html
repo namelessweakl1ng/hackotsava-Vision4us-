@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ArtVisionAI - AI Painting Analyzer</title>
+  <style>
+    :root {
+      /* Light mode colors */
+      --primary-color: #5d4fff;
+      --primary-dark: #4338ca;
+      --secondary-color: #ff6b6b;
+      --background-color: #f8fafc;
+      --surface-color: #ffffff;
+      --text-primary: #1e293b;
+      --text-secondary: #64748b;
+      --border-color: #e2e8f0;
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      --gradient: linear-gradient(135deg, #5d4fff 0%, #ff6b6b 100%);
+    }
+
+    [data-theme="dark"] {
+      /* Dark mode colors */
+      --primary-color: #7c73ff;
+      --primary-dark: #5d4fff;
+      --secondary-color: #ff8e8e;
+      --background-color: #0f172a;
+      --surface-color: #1e293b;
+      --text-primary: #f1f5f9;
+      --text-secondary: #cbd5e1;
+      --border-color: #334155;
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      --gradient: linear-gradient(135deg, #7c73ff 0%, #ff8e8e 100%);
+    }
+
+    * {
+      transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+    }
+
+    body {
+      font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--background-color);
+      color: var(--text-primary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      margin: 0;
+      min-height: 100vh;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      max-width: 800px;
+      margin-bottom: 10px;
+    }
+
+    .theme-toggle {
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 8px 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-secondary);
+      box-shadow: var(--shadow);
+    }
+
+    .theme-toggle:hover {
+      background-color: var(--primary-color);
+      color: white;
+    }
+
+    h1 {
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin: 10px 0 20px;
+      font-size: 2.2rem;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      margin-bottom: 30px;
+      text-align: center;
+      max-width: 500px;
+    }
+
+    .container {
+      background: var(--surface-color);
+      padding: 25px;
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      width: 100%;
+      max-width: 500px;
+      text-align: center;
+      margin-top: 10px;
+      border: 1px solid var(--border-color);
+    }
+
+    video, canvas, img {
+      width: 100%;
+      border-radius: 12px;
+      margin-top: 15px;
+      border: 1px solid var(--border-color);
+    }
+
+    button {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 20px;
+      margin-top: 15px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(93, 79, 255, 0.3);
+      transition: all 0.2s ease;
+    }
+
+    button:hover {
+      background-color: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(93, 79, 255, 0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .secondary-btn {
+      background-color: transparent;
+      color: var(--primary-color);
+      border: 1px solid var(--primary-color);
+      box-shadow: none;
+    }
+
+    .secondary-btn:hover {
+      background-color: rgba(93, 79, 255, 0.1);
+    }
+
+    #result {
+      background: var(--surface-color);
+      width: 100%;
+      max-width: 700px;
+      margin-top: 30px;
+      border-radius: 16px;
+      padding: 25px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border-color);
+    }
+
+    .loading {
+      color: var(--primary-color);
+      margin-top: 15px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .loading-spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(93, 79, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: var(--primary-color);
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 20px 0;
+      color: var(--text-secondary);
+    }
+
+    .divider::before,
+    .divider::after {
+      content: "";
+      flex: 1;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .divider::before {
+      margin-right: 10px;
+    }
+
+    .divider::after {
+      margin-left: 10px;
+    }
+
+    .file-input-wrapper {
+      position: relative;
+      display: inline-block;
+      width: 100%;
+      margin-top: 15px;
+    }
+
+    .file-input-wrapper input[type="file"] {
+      position: absolute;
+      left: 0;
+      top: 0;
+      opacity: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+    }
+
+    .file-input-label {
+      display: block;
+      padding: 12px 20px;
+      background-color: var(--surface-color);
+      color: var(--text-primary);
+      border: 1px dashed var(--border-color);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .file-input-label:hover {
+      border-color: var(--primary-color);
+      background-color: rgba(93, 79, 255, 0.05);
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .result-item {
+      text-align: left;
+    }
+
+    .result-label {
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      margin-bottom: 5px;
+    }
+
+    .result-value {
+      color: var(--text-primary);
+      margin-bottom: 15px;
+    }
+
+    .description-box {
+      background-color: rgba(93, 79, 255, 0.05);
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 15px;
+      border-left: 4px solid var(--primary-color);
+    }
+
+    @media (max-width: 768px) {
+      .result-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .container, #result {
+        width: 95%;
+        padding: 20px 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>ArtVisionAI</h1>
+    <button class="theme-toggle" id="themeToggle">
+      <span id="themeIcon">🌙</span> <span id="themeText">Dark Mode</span>
+    </button>
+  </div>
+  
+  <p class="subtitle">Capture or upload a painting to analyze its artistic elements with AI</p>
+
+  <div class="container">
+    <video id="camera" autoplay playsinline></video>
+    <canvas id="snapshot" style="display:none;"></canvas>
+    <button id="captureBtn">📸 Capture Photo</button>
+    
+    <div class="divider">or</div>
+    
+    <div class="file-input-wrapper">
+      <input type="file" id="imageInput" accept="image/*" />
+      <label for="imageInput" class="file-input-label">📁 Choose Image File</label>
+    </div>
+    
+    <button onclick="analyzePainting()">Analyze Painting</button>
+    <div id="loading" class="loading" style="display:none;">
+      <div class="loading-spinner"></div> Analyzing... please wait.
+    </div>
+  </div>
+
+  <div id="result" style="display:none;">
+    <h2>🖼️ Analysis Result</h2>
+    <img id="preview" />
+    
+    <div class="result-grid">
+      <div class="result-item">
+        <div class="result-label">Artist</div>
+        <div class="result-value" id="artist"></div>
+      </div>
+      
+      <div class="result-item">
+        <div class="result-label">Time Period</div>
+        <div class="result-value" id="time_period"></div>
+      </div>
+      
+      <div class="result-item">
+        <div class="result-label">Style</div>
+        <div class="result-value" id="style"></div>
+      </div>
+      
+      <div class="result-item">
+        <div class="result-label">Medium</div>
+        <div class="result-value" id="medium"></div>
+      </div>
+    </div>
+    
+    <div class="result-item">
+      <div class="result-label">Historical Context</div>
+      <div class="result-value" id="historical_context"></div>
+    </div>
+    
+    <div class="result-item">
+      <div class="result-label">Description</div>
+      <div class="description-box" id="description"></div>
+    </div>
+  </div>
+
+  <script>
+    
+  const video = document.getElementById("camera");
+  const canvas = document.getElementById("snapshot");
+  const captureBtn = document.getElementById("captureBtn");
+  const themeToggle = document.getElementById("themeToggle");
+  const themeIcon = document.getElementById("themeIcon");
+  const themeText = document.getElementById("themeText");
+  const imageInput = document.getElementById("imageInput");
+  let capturedImageBlob = null;
+  let lastPreviewURL = null;
+
+  // 🌗 Theme toggle
+  function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute("data-theme");
+    if (currentTheme === "dark") {
+      document.documentElement.removeAttribute("data-theme");
+      themeIcon.textContent = "🌙";
+      themeText.textContent = "Dark Mode";
+      localStorage.setItem("theme", "light");
+    } else {
+      document.documentElement.setAttribute("data-theme", "dark");
+      themeIcon.textContent = "☀️";
+      themeText.textContent = "Light Mode";
+      localStorage.setItem("theme", "dark");
+    }
+  }
+
+  const savedTheme = localStorage.getItem("theme");
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
+  if (savedTheme === "dark" || (!savedTheme && prefersDark.matches)) {
+    document.documentElement.setAttribute("data-theme", "dark");
+    themeIcon.textContent = "☀️";
+    themeText.textContent = "Light Mode";
+  }
+  themeToggle.addEventListener("click", toggleTheme);
+
+  // 🎥 Start the live camera feed
+  async function startCamera() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = stream;
+    } catch (err) {
+      alert("Unable to access camera: " + err.message);
+    }
+  }
+  startCamera();
+
+  // 📸 Capture from video to Blob
+  captureBtn.addEventListener("click", () => {
+    const ctx = canvas.getContext("2d");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        alert("Failed to capture image. Please try again.");
+        return;
+      }
+      capturedImageBlob = blob;
+
+      // Update preview
+      const preview = document.getElementById("preview");
+      if (lastPreviewURL) URL.revokeObjectURL(lastPreviewURL);
+      lastPreviewURL = URL.createObjectURL(blob);
+      preview.src = lastPreviewURL;
+      document.getElementById("result").style.display = "none";
+
+      alert("✅ Image captured! Now click 'Analyze Painting'.");
+    }, "image/png");
+  });
+
+  // 🎨 Analyze Painting (works with captured or uploaded file)
+  async function analyzePainting() {
+    const loading = document.getElementById("loading");
+    const resultBox = document.getElementById("result");
+    loading.style.display = "flex";
+    resultBox.style.display = "none";
+
+    let fileToSend = null;
+
+    if (capturedImageBlob) {
+      fileToSend = new File([capturedImageBlob], "captured.png", { type: "image/png" });
+    } else if (imageInput.files.length > 0) {
+      fileToSend = imageInput.files[0];
+    } else {
+      loading.style.display = "none";
+      alert("Please capture or upload an image first!");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", fileToSend);
+
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/analyze-painting", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      loading.style.display = "none";
+
+      if (!res.ok) {
+        throw new Error(data.error || "Unknown error from server");
+      }
+
+      const record = data.data;
+      showResult(record, fileToSend);
+    } catch (err) {
+      loading.style.display = "none";
+      alert("❌ Could not connect to backend: " + err.message);
+
+      // Offline demo fallback
+      const demoRecord = {
+        artist: "Vincent van Gogh",
+        time_period: "Late 19th Century (1889)",
+        style: "Post-Impressionism",
+        medium: "Oil on canvas",
+        historical_context:
+          "Painted during van Gogh's stay at the Saint-Paul-de-Mausole asylum in Saint-Rémy-de-Provence, France.",
+        description:
+          "A swirling night sky over a quiet town, bold color and contoured brushwork evoke deep emotion and movement.",
+      };
+      showResult(demoRecord, fileToSend);
+    }
+  }
+
+  function showResult(record, file) {
+    const resultBox = document.getElementById("result");
+    document.getElementById("artist").textContent = record.artist || "Unknown";
+    document.getElementById("time_period").textContent = record.time_period || "Unknown";
+    document.getElementById("style").textContent = record.style || "Unknown";
+    document.getElementById("medium").textContent = record.medium || "Unknown";
+    document.getElementById("historical_context").textContent = record.historical_context || "Unknown";
+    document.getElementById("description").textContent = record.description || "No description available.";
+
+    const preview = document.getElementById("preview");
+    if (lastPreviewURL) URL.revokeObjectURL(lastPreviewURL);
+    lastPreviewURL = URL.createObjectURL(file);
+    preview.src = lastPreviewURL;
+
+    resultBox.style.display = "block";
+  }
+
+  </script>
+</body>
+</html>
