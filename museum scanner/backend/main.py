@@ -29,8 +29,8 @@ client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 # MongoDB connection
 mongo_uri = "mongodb://localhost:27017"
 mongo_client = MongoClient(mongo_uri)
-db = mongo_client["passmgr"]
-collection = db["museum"]
+db = mongo_client["database1"]
+collection = db["database1"]
 
 # ------------------------------
 #  Analyze Painting Endpoint
