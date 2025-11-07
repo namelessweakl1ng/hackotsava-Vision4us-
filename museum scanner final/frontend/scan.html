@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎨 Museum Art Scanner</title>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f5f7fa;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    h1 {
+      margin-top: 30px;
+      color: #333;
+      font-weight: 600;
+    }
+
+    .container {
+      background: white;
+      border-radius: 16px;
+      padding: 20px 30px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      margin: 30px 0;
+      width: 90%;
+      max-width: 600px;
+      text-align: center;
+    }
+
+    video, img {
+      width: 100%;
+      border-radius: 8px;
+      margin-top: 10px;
+      display: none;
+    }
+
+    button {
+      background: #0078D7;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      margin: 10px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #005fa3;
+    }
+
+    .result {
+      text-align: left;
+      margin-top: 15px;
+    }
+
+    .result h2 {
+      margin-bottom: 5px;
+    }
+
+    .confidence {
+      color: #666;
+      font-size: 0.9em;
+    }
+
+    .error {
+      color: #c00;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🎨 Museum Art Scanner</h1>
+  <div class="container">
+    <p>Upload an image or take a live photo of the artwork to identify it.</p>
+
+    <div>
+      <input type="file" id="imageInput" accept="image/*">
+      <button id="cameraBtn">📷 Use Camera</button>
+    </div>
+
+    <video id="cameraStream" autoplay playsinline></video>
+    <button id="captureBtn" style="display:none;">📸 Capture</button>
+    <img id="preview" alt="Preview">
+
+    <button id="scanBtn">🔍 Scan Artwork</button>
+
+    <div id="output" class="result"></div>
+  </div>
+
+  <script>
+    const backendURL = "http://127.0.0.1:8000/api/scan";
+    const imageInput = document.getElementById("imageInput");
+    const cameraBtn = document.getElementById("cameraBtn");
+    const captureBtn = document.getElementById("captureBtn");
+    const cameraStream = document.getElementById("cameraStream");
+    const preview = document.getElementById("preview");
+    const scanBtn = document.getElementById("scanBtn");
+    const output = document.getElementById("output");
+
+    let cameraActive = false;
+    let capturedBlob = null;
+
+    // 🧩 Camera setup
+    cameraBtn.addEventListener("click", async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        cameraStream.srcObject = stream;
+        cameraStream.style.display = "block";
+        captureBtn.style.display = "inline-block";
+        cameraActive = true;
+        preview.style.display = "none";
+        capturedBlob = null;
+        output.innerHTML = "";
+      } catch (err) {
+        alert("Camera access denied or unavailable.");
+      }
+    });
+
+    // 🧩 Capture photo from camera
+    captureBtn.addEventListener("click", () => {
+      if (!cameraActive) return;
+      const canvas = document.createElement("canvas");
+      canvas.width = cameraStream.videoWidth;
+      canvas.height = cameraStream.videoHeight;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(cameraStream, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(blob => {
+        capturedBlob = blob;
+        preview.src = URL.createObjectURL(blob);
+        preview.style.display = "block";
+        output.innerHTML = "<p>✅ Photo captured. Click Scan to analyze.</p>";
+      }, "image/jpeg");
+    });
+
+    // 🧩 File input preview
+    imageInput.addEventListener("change", () => {
+      const file = imageInput.files[0];
+      if (file) {
+        preview.src = URL.createObjectURL(file);
+        preview.style.display = "block";
+        output.innerHTML = "";
+        capturedBlob = null;
+      }
+    });
+
+    // 🧩 Scan button
+    scanBtn.addEventListener("click", async () => {
+      output.innerHTML = "";
+
+      let file;
+      if (capturedBlob) {
+        file = new File([capturedBlob], "capture.jpg", { type: "image/jpeg" });
+      } else if (imageInput.files.length > 0) {
+        file = imageInput.files[0];
+      } else {
+        output.innerHTML = `<p class="error">⚠️ Please upload or capture an image first.</p>`;
+        return;
+      }
+
+      output.innerHTML = "<p>⏳ Scanning image...</p>";
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const res = await fetch(backendURL, {
+          method: "POST",
+          body: formData
+        });
+        const data = await res.json();
+
+        if (!data.artwork_id) {
+          output.innerHTML = `<p class="error">😕 ${data.message || "No match found."}</p>`;
+          return;
+        }
+
+        const details = data.details || {};
+        const confidence = (data.score * 100).toFixed(2);
+
+        output.innerHTML = `
+          <h2>🖼️ ${details.title || "Unknown Artwork"}</h2>
+          <p><strong>Artist:</strong> ${details.artist || "N/A"}</p>
+          <p><strong>Year:</strong> ${details.year || "N/A"}</p>
+          <p><strong>Description:</strong> ${details.description || "No description available."}</p>
+          <p class="confidence">Confidence: ${confidence}%</p>
+        `;
+      } catch (err) {
+        output.innerHTML = `<p class="error">❌ Error: ${err.message}</p>`;
+      }
+    });
+  </script>
+</body>
+</html>
